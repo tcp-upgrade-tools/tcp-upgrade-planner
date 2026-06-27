@@ -1,0 +1,31 @@
+{
+  "targets": ["5.0.2"],
+  "byTarget": {
+    "5.0.2": {
+      "CNF": { "sources": ["3.0", "4.0", "4.0.1", "5.0", "5.0.1"], "via": {} },
+      "VNF": {
+        "sources": ["3.0", "4.0", "4.0.1", "5.0", "5.0.1", "TCI-CDE-3.0", "TCI-CDE-2.7", "TCI-CDE-2.2"],
+        "via": { "TCI-CDE-2.7": ["TCI-CDE-3.0"] }
+      },
+      "componentCaveats": {
+        "TCI-CDE-2.2": {
+          "vcd": "Coming from TCI – Cloud Director Edition 2.2, VMware Cloud Director must be upgraded in sequence: 10.3.3.x → 10.4.3 → 10.6.1 (do not skip intermediate versions; 10.6.1 is the 5.0.2 target)."
+        }
+      }
+    }
+  },
+  "sourceLabels": {
+    "TCI-CDE-3.0": "Telco Cloud Infrastructure – Cloud Director Edition 3.0",
+    "TCI-CDE-2.7": "Telco Cloud Infrastructure – Cloud Director Edition 2.7",
+    "TCI-CDE-2.2": "Telco Cloud Infrastructure – Cloud Director Edition 2.2"
+  },
+  "sourceGroups": [
+    { "label": "Telco Cloud Platform", "match": "tcp" },
+    { "label": "Telco Cloud Infrastructure – Cloud Director Edition", "match": "cde" }
+  ],
+  "notes": [
+    "When upgrading VMware Cloud Director from Telco Cloud Infrastructure 2.2, follow the chained sequence 10.3.3.x > 10.4.3 > 10.6.1.",
+    "Telco Cloud Infrastructure – Cloud Director Edition 2.7 must first be upgraded to 3.0 before moving to the target.",
+    "Depending on whether you run CNF or VNF workloads, skip the components that are not relevant to your deployment."
+  ]
+}

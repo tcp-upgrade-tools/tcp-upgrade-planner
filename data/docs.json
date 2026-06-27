@@ -1,0 +1,33 @@
+{
+  "base": "https://techdocs.broadcom.com/us/en/vmware-sde/telco-cloud/vmware-telco-cloud-platform",
+  "guidePath": "telco-cloud-platform-upgrade-guide",
+  "upgradingPath": "upgrading-telco-cloud-platform-5g-edition-from-2-0-to-2-1",
+  "versionSlug": {
+    "5.0.2": "5-0-2"
+  },
+  "guidePages": {
+    "home": "telco-cloud-platform-upgrade-guide.html",
+    "overview": "overview-of-the-telco-cloud-platform-5g-edition-upgrade.html",
+    "prerequisites": "overview-of-the-telco-cloud-platform-5g-edition-upgrade.html",
+    "snapshot-backup": "overview-of-the-telco-cloud-platform-5g-edition-upgrade/snapshot-and-backup-requirements.html",
+    "post-upgrade": "post-upgrade-checklist.html"
+  },
+  "componentPages": {
+    "vcd": "upgrade-vmware-cloud-director.html",
+    "vsphere-replication": "upgrade-vsphere-replication.html",
+    "lsr": "upgrade-site-recovery-manager.html",
+    "tca": "upgrade-telco-cloud-automation-from-2-2-to-3-0.html",
+    "airgap": "upgrade-telco-cloud-automation-from-2-2-to-3-0.html",
+    "harbor": "upgrade-harbor-for-cnfs.html",
+    "avi": "upgrade-ako-for-non-airgap.html",
+    "ako": "upgrade-avi-kubernetes-operator.html",
+    "tkg-mgmt": "upgrading-tanzu-kubernetes-cluster.html",
+    "tkg-workload": "upgrading-tanzu-kubernetes-cluster.html",
+    "nsx": "upgrading-nsx-t-data-center.html",
+    "vcenter": "upgrading-vcenter-server.html",
+    "esxi": "upgrading-esxi.html",
+    "vsan": "upgrading-esxi.html",
+    "aria-orchestrator": "upgrade-aria-products.html",
+    "aria-products": "upgrade-aria-products.html"
+  }
+}

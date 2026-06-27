@@ -1,0 +1,37 @@
+{
+  "CNF": {
+    "label": "CNF Workloads (Tanzu Kubernetes / cloud-native)",
+    "summary": "Order taken directly from the 'Upgrade Sequence for CNF Workloads' flowchart: Airgap → Telco Cloud Automation → Harbor → Avi Load Balancer → Tanzu Kubernetes Management Cluster → AKO → Tanzu Kubernetes Workload Cluster, then (for a full-stack upgrade) Aria Automation Orchestrator → NSX → vSphere (vCenter → ESXi → vSAN) for the management and each resource domain.",
+    "hasFullStack": true,
+    "order": [
+      { "id": "airgap", "conditional": "Only if an Airgap Server is deployed." },
+      { "id": "tca" },
+      { "id": "harbor", "conditional": "Only if Harbor for CNFs is deployed (4.0.1+)." },
+      { "id": "avi", "conditional": "Only if Avi Load Balancer is installed." },
+      { "id": "tkg-mgmt" },
+      { "id": "ako", "conditional": "Only if AKO is installed in the workload cluster. Verify AKO/Kubernetes compatibility first." },
+      { "id": "tkg-workload" },
+      { "id": "aria-orchestrator", "fullStack": true },
+      { "id": "nsx", "fullStack": true },
+      { "id": "vcenter", "fullStack": true },
+      { "id": "esxi", "fullStack": true },
+      { "id": "vsan", "fullStack": true }
+    ]
+  },
+  "VNF": {
+    "label": "VNF Workloads (Telco Cloud Infrastructure – Cloud Director Edition)",
+    "summary": "Order taken from the numbered 'Upgrade Sequence for VNF Workloads' table, applied across the Management, Resource & Edge, and Disaster Recovery pods: VMware Cloud Director → vSphere Replication → Live Site Recovery → NSX (Edge → host VIBs → Manager) → vCenter → ESXi & vSAN → Aria products → Avi Load Balancer.",
+    "hasFullStack": false,
+    "order": [
+      { "id": "vcd" },
+      { "id": "vsphere-replication" },
+      { "id": "lsr" },
+      { "id": "nsx" },
+      { "id": "vcenter" },
+      { "id": "esxi" },
+      { "id": "vsan" },
+      { "id": "aria-products" },
+      { "id": "avi", "conditional": "Only if Avi Load Balancer is installed." }
+    ]
+  }
+}

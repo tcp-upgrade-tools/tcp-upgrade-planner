@@ -1,0 +1,18 @@
+{
+  "vcd":            { "name": "VMware Cloud Director", "formerly": "vCloud Director", "appliesTo": ["VNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/cloud-director/vmware-cloud-director.html" },
+  "vsphere-replication": { "name": "vSphere Replication", "appliesTo": ["VNF"], "mandatory": false, "gate": "Do you run the Disaster Recovery pod (vSphere Replication)?", "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/live-recovery/vsphere-replication.html" },
+  "lsr":            { "name": "Live Site Recovery", "formerly": "Site Recovery Manager", "appliesTo": ["VNF"], "mandatory": false, "gate": "Do you run the Disaster Recovery pod (Live Site Recovery)?", "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/live-recovery/live-site-recovery.html" },
+  "tca":            { "name": "Telco Cloud Automation", "appliesTo": ["CNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-automation.html" },
+  "airgap":         { "name": "Airgap Server", "appliesTo": ["CNF"], "mandatory": false, "gate": "Is an Airgap Server deployed?", "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-automation.html" },
+  "harbor":         { "name": "Harbor for CNFs", "appliesTo": ["CNF"], "mandatory": false, "gate": "Is Harbor for CNFs deployed?", "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-platform.html" },
+  "avi":            { "name": "Avi Load Balancer", "formerly": "NSX Advanced Load Balancer", "appliesTo": ["CNF", "VNF"], "mandatory": false, "gate": "Is Avi Load Balancer installed?", "doc": "https://techdocs.broadcom.com/us/en/vmware-security-load-balancing/avi-load-balancer.html" },
+  "ako":            { "name": "Avi Kubernetes Operator (AKO)", "appliesTo": ["CNF"], "mandatory": false, "gate": "Is AKO installed in the workload cluster?", "doc": "https://techdocs.broadcom.com/us/en/vmware-security-load-balancing/avi-load-balancer.html" },
+  "tkg-mgmt":       { "name": "Tanzu Kubernetes Management Cluster", "formerly": "Tanzu Kubernetes Grid", "appliesTo": ["CNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-automation.html" },
+  "tkg-workload":   { "name": "Tanzu Kubernetes Workload Cluster", "formerly": "Tanzu Kubernetes Grid", "appliesTo": ["CNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-automation.html" },
+  "nsx":            { "name": "NSX", "formerly": "NSX-T Data Center", "appliesTo": ["CNF", "VNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/nsx/vmware-nsx.html" },
+  "vcenter":        { "name": "vCenter Server", "appliesTo": ["CNF", "VNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vcenter-server-management.html" },
+  "esxi":           { "name": "ESXi", "appliesTo": ["CNF", "VNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-upgrade.html" },
+  "vsan":           { "name": "vSAN Cluster", "appliesTo": ["CNF", "VNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/vsan/vsan/8-0.html" },
+  "aria-orchestrator": { "name": "Aria Automation Orchestrator", "formerly": "vRealize Orchestrator", "appliesTo": ["CNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/aria/aria-automation-orchestrator.html" },
+  "aria-products":  { "name": "Aria Products (Operations, Logs, Networks, Orchestrator)", "appliesTo": ["VNF"], "mandatory": true, "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/aria.html" }
+}

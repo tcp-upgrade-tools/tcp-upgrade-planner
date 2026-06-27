@@ -1,0 +1,257 @@
+{
+  "prerequisites": {
+    "title": "Pre-Upgrade Checklist",
+    "kind": "checklist",
+    "summary": "Telco Cloud Platform follows strict upgrade guidelines. Complete these checks before starting any component upgrade.",
+    "checklist": [
+      "The existing Telco Cloud solution in production is fully functional.",
+      "The Telco Cloud Platform {target} bundle is downloaded and accessible from the Advanced downloads page.",
+      "The environment has enough storage capacity for backups and snapshots.",
+      "Management components are snapshotted and backed up (see the Snapshot & Backup phase).",
+      "All components in production are patched to the latest level.",
+      "An upgrade plan has been developed from the Upgrade Sequence — this runbook is that plan."
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-platform.html"
+  },
+  "snapshot-backup": {
+    "title": "Snapshot & Backup",
+    "kind": "checklist",
+    "summary": "Before upgrading any component, snapshot and back it up. If a phase fails, restore the component to its previous version from the snapshot/backup. This is your rollback safety net for every later phase.",
+    "checklist": [
+      "VMware Cloud Director: snapshot the appliance and back up the embedded database.",
+      "vSphere Replication: snapshot the appliance VM.",
+      "Live Site Recovery: snapshot the appliance and back up the embedded vPostgres database.",
+      "vCenter: VM snapshot + file-based backup from the vCenter interface.",
+      "NSX Manager: back up the NSX Manager configuration.",
+      "ESXi and vSAN: back up the ESXi host configuration (KB 2042141).",
+      "Aria Operations for Networks: snapshot (KB 55829) and back up the deployment.",
+      "Aria Automation Orchestrator: VM snapshot — deactivate 'Snapshot the virtual machine's memory' (8.x does not support memory snapshots).",
+      "Aria Operations for Logs / Aria Operations: snapshot the cluster nodes.",
+      "Telco Cloud Automation: snapshot the TCA appliance.",
+      "Avi Load Balancer: snapshot the Avi controllers."
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-platform.html"
+  },
+  "vcd": {
+    "title": "Upgrade VMware Cloud Director to {target}",
+    "summary": "First phase for VNF (Cloud Director Edition) deployments. Upgrade the Cloud Director cells and embedded database to {target}. The detailed click-by-click procedure lives in the official documentation — use the link below as the source of truth.",
+    "prerequisites": [
+      "Superuser credentials for all Cloud Director cells in the server group.",
+      "All ESXi hosts enabled (deactivated ESXi hosts are unsupported since Cloud Director 10.3.2a).",
+      "Embedded database backed up and a snapshot of the primary appliance taken."
+    ],
+    "impact": "The tenant portal and API are briefly unavailable while the cells are upgraded.",
+    "rollback": "Restore the primary appliance snapshot and the embedded database backup.",
+    "considerations": [
+      "If vCenter disconnects after the upgrade, reconnect via Resources > Infrastructure Resources > vCenter Server Instances > select instance > Reconnect (KB78885).",
+      "If Avi Load Balancer was deployed as part of Cloud Director, upgrade Avi Load Balancer as well."
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/cloud-director/vmware-cloud-director.html"
+  },
+  "vsphere-replication": {
+    "title": "Upgrade vSphere Replication to {target}",
+    "summary": "Upgrade the vSphere Replication environment to {target} before Live Site Recovery. Follow the official procedure for the exact steps.",
+    "prerequisites": ["Snapshot of the vSphere Replication appliance VM taken."],
+    "impact": "Replication is paused during the upgrade.",
+    "rollback": "Restore the appliance VM snapshot.",
+    "considerations": [
+      "Upgrade ALL components on the protected site before the recovery site.",
+      "If the protected site becomes inaccessible during the upgrade, use the recovery site to restore it to its original state."
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/live-recovery/vsphere-replication.html"
+  },
+  "lsr": {
+    "title": "Upgrade Live Site Recovery to {target}",
+    "summary": "Upgrade Live Site Recovery (formerly Site Recovery Manager) to {target}. Complete all tasks on the protected site first, then the recovery site. See the official procedure for the steps.",
+    "prerequisites": [
+      "Snapshot of the LSR virtual appliance taken.",
+      "Reviewed the Prerequisites and Best Practices for Live Site Recovery Upgrade.",
+      "vSphere Replication already upgraded to {target}."
+    ],
+    "impact": "Live Site Recovery is unavailable until BOTH vSphere Replication and LSR are upgraded to {target} on the protected and recovery sites.",
+    "rollback": "Restore the appliance snapshot and the embedded vPostgres database backup.",
+    "considerations": ["Complete the protected site fully before starting the recovery site."],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/live-recovery/live-site-recovery.html"
+  },
+  "tca": {
+    "title": "Upgrade Telco Cloud Automation to {target}",
+    "summary": "Upgrade TCA Manager and TCA Control Plane to {target}. Supported paths to 3.3.0.1: 3.3, 3.2, 3.1.1, 3.1, and 2.3. The official guide has the exact upgrade steps; the points below are the planning context and order.",
+    "prerequisites": [
+      "Components of the current TCA release are activated.",
+      "TCA Manager and TCA Control Plane appliances are backed up.",
+      "The TCA {target} upgrade bundle is downloaded from the TCP Advanced downloads page."
+    ],
+    "impact": "The TCA management plane is unavailable during the upgrade; running CNFs are unaffected.",
+    "rollback": "Restore the TCA Manager and TCA Control Plane appliance snapshots.",
+    "considerations": [
+      "If an Airgap server exists, upgrade it to {target} first.",
+      "After upgrade, verify the dashboard shows {target} and all services are up.",
+      "Update the existing Harbor with ca.crt under TCA Manager > Infrastructure > Partner Systems (private CA-signed/self-signed certificates only).",
+      "Calico add-on update may appear on workload clusters after 3.2 → 3.3.0.1 — recommended, but may cause a minor service fluctuation."
+    ],
+    "snippets": [
+      { "label": "Verify services are up (browser)", "note": "Confirm both URLs load after the upgrade.", "commands": ["https://<TCA Manager_FQDN>:9443", "https://<TCA Control Plane_FQDN>:9443"] }
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-automation.html"
+  },
+  "airgap": {
+    "title": "Upgrade Airgap Server to {target}",
+    "summary": "The Airgap Server serves images and Helm charts to disconnected environments. Upgrade it to TCA {target} before any Tanzu Kubernetes cluster upgrade. Follow the 'Upgrade Airgap Appliance' procedure in the docs.",
+    "considerations": ["Ensure required Helm charts and images are published in the local repository before upgrading dependent components."],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-automation.html"
+  },
+  "harbor": {
+    "title": "Upgrade Harbor for CNFs to {target}",
+    "summary": "Harbor is the registry for CNF Helm charts and container images, deployed and upgraded as a CNF through TCA. Follow the Harbor for CNFs Deployment and Configuration Guide for the upgrade procedure.",
+    "considerations": ["Applicable only when Harbor was deployed as a CNF in TCP 4.0.1 or later.", "Download Harbor for CNFs from Drivers & Tools on the TCP Advanced downloads page."],
+    "snippets": [
+      { "label": "Airgap only — push Harbor CNF charts/images to the Airgap Harbor registry", "note": "Reference snippet from the Harbor for CNFs guide — verify against the linked doc. The harborcnf project must be pre-created; pass.txt holds the airgap Harbor password, ca.crt its certificate.", "commands": ["tar -xvf Harbor-For-CNFs-<harbor_version>-<build_number>.tgz", "cd bin/scripts", "./push-harbor-artifacts.sh [-i <image-tar-dir>] [-h <helm-oci-chart-dir>] [-r <harbor-fqdn>:<port>] [-p <project>] [-u <user>] [-f <password-file>] [-c <ca-cert-file>]", "# Example (from the guide):", "./push-harbor-artifacts.sh -i /tmp/images/ -h /tmp/helm/ -r airgap5.dc2.vmw:8043 -p harborcnf -u admin -f /tmp/pass.txt -c /tmp/ca.crt"] }
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-platform.html"
+  },
+  "avi": {
+    "title": "Upgrade Avi Load Balancer to {target}",
+    "summary": "Upgrade Avi Load Balancer (formerly NSX Advanced Load Balancer) to {target}. The detailed steps are in the Avi Load Balancer Upgrade Guide.",
+    "prerequisites": [
+      "Snapshot and backup of the Avi controllers taken.",
+      "Avi Load Balancer {target} is compatible with your AKO version (see the AKO Compatibility Matrix)."
+    ],
+    "impact": "Briefly affects load-balanced application traffic during controller upgrade.",
+    "rollback": "Restore the Avi controller snapshot.",
+    "considerations": ["Download Avi Load Balancer from the VMware Avi Load Balancer downloads page.", "After upgrade, confirm applications remain accessible."],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-security-load-balancing/avi-load-balancer.html"
+  },
+  "ako": {
+    "title": "Upgrade Avi Kubernetes Operator (AKO) to {target}",
+    "summary": "AKO integrates Avi Load Balancer with Kubernetes clusters. Upgrade it to {target} after Avi Load Balancer. If AKO was installed with Helm, upgrade it with Helm (see the Upgrade AKO section in Install AKO).",
+    "prerequisites": [
+      "Avi Load Balancer already upgraded.",
+      "AKO {target} is compatible with your Kubernetes versions (AKO Compatibility Matrix).",
+      "Airgap + Helm: charts published in the local repository."
+    ],
+    "considerations": ["Download AKO from the VMware Avi Load Balancer downloads page."],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-security-load-balancing/avi-load-balancer.html"
+  },
+  "tkg-mgmt": {
+    "title": "Upgrade Tanzu Kubernetes Management Cluster to {target}",
+    "summary": "TCA is integrated with Tanzu Kubernetes Grid. Upgrade the management clusters first (before AKO and the workload clusters) to {target}. Follow 'Upgrade the Kubernetes Version for a Cluster Instance' for the exact steps.",
+    "prerequisites": [
+      "If airgapped, the Airgap server is already upgraded.",
+      "Kubernetes upgrade compatibility verified for each management cluster.",
+      "Latest Kubernetes Cluster templates downloaded; Cluster OVA imported into vSphere and converted to a template."
+    ],
+    "impact": "Rolling control-plane/node replacement on the management cluster.",
+    "rollback": "Follow TKG/TCA cluster recovery guidance; clusters are upgraded in place.",
+    "considerations": ["Upgrade each Tanzu Kubernetes management cluster sequentially before proceeding."],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-automation.html"
+  },
+  "tkg-workload": {
+    "title": "Upgrade Tanzu Kubernetes Workload Cluster to {target}",
+    "summary": "After the management clusters (and AKO, if installed) are upgraded, upgrade each Tanzu Kubernetes workload cluster to {target}. Follow 'Upgrade Kubernetes Version for Workload Cluster Instance' for the exact steps.",
+    "prerequisites": [
+      "Management clusters already upgraded.",
+      "AKO upgraded first if it is installed in the workload cluster.",
+      "Kubernetes upgrade compatibility verified for each workload cluster."
+    ],
+    "impact": "Rolling node replacement; workloads should stay available if correctly configured.",
+    "rollback": "Follow TKG/TCA cluster recovery guidance; clusters are upgraded in place.",
+    "considerations": [
+      "Upgrade each workload cluster, then confirm all pods are up and running.",
+      "After upgrade, update the Kubernetes version in the cluster templates: TCA UI > Infrastructure > CaaS Infrastructure > Cluster templates (edit templates showing compatibility errors)."
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-automation.html"
+  },
+  "nsx": {
+    "title": "Upgrade NSX to {target}",
+    "summary": "Upgrade NSX to {target} using the Upgrade Coordinator in NSX Manager. It orchestrates the upgrade in order: NSX Edges → ESXi hosts → NSX management plane. The official NSX upgrade procedure has the detailed steps.",
+    "prerequisites": [
+      "NSX pre-upgrade tasks performed and the NSX Upgrade Checklist reviewed.",
+      "Infrastructure prepared for the NSX upgrade.",
+      "Existing NSX Manager backed up.",
+      "All alerts on the NSX Alerts page fixed.",
+      "NSX downloaded from the TCP Advanced downloads page."
+    ],
+    "impact": "Edge and host upgrades are rolling; brief data-path impact possible per host.",
+    "rollback": "Restore the NSX Manager backup; follow NSX Troubleshooting Upgrade Failures.",
+    "considerations": [
+      "SR-IOV / non-migratable worker nodes: drain pods and power off the worker VMs before the ESXi host step (see the ESXi phase).",
+      "vSphere Lifecycle Manager-enabled clusters: follow 'Upgrade a vSphere Lifecycle Manager-enabled Cluster'.",
+      "After upgrade: verify clusters are in Success state (NSX Manager VIP > System > Fabric > Nodes > Host Transport Nodes); reconfigure with CONFIGURE NSX if a host errors.",
+      "Update the NSX certificate in TCA Appliance Manager (TCA-CP): Configuration > NSX > Edit > re-enter password > accept certificate > Save."
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/nsx/vmware-nsx.html"
+  },
+  "vcenter": {
+    "title": "Upgrade vCenter Server to {target}",
+    "summary": "Upgrade vCenter for the management domain first, then each resource/workload domain, to {target} (any patch on top of 8.0 U3). See 'Patching and Updating vCenter Server 8.0 Deployments' for the steps.",
+    "prerequisites": [
+      "VAMI shows all vCenter services healthy and started.",
+      "VM snapshot of the vCenter appliance taken."
+    ],
+    "impact": "vCenter management is briefly unavailable; running workloads are unaffected.",
+    "rollback": "Restore the vCenter VM snapshot / file-based backup.",
+    "considerations": ["You can also update vCenter through Telco Cloud Automation (Infrastructure Lifecycle Management Workflows)."],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vcenter-server-management.html"
+  },
+  "esxi": {
+    "title": "Upgrade ESXi to {target}",
+    "summary": "Upgrade ESXi after vCenter to {target} (any patch on top of 8.0 U3). vSAN is upgraded automatically with the host. The procedure differs for hosts running Tanzu Kubernetes worker nodes that use SR-IOV vs hosts without SR-IOV — see the official ESXi Upgrade Guide for full detail.",
+    "prerequisites": ["vCenter already upgraded.", "ESXi downloaded from the TCP Advanced downloads page."],
+    "impact": "All ESXi hosts in the cluster are rebooted during the upgrade.",
+    "rollback": "Restore the ESXi host configuration backup (KB 2042141).",
+    "considerations": [
+      "Hosts with SR-IOV (or non-migratable) worker nodes: drain pods and power off those worker VMs, remediate the host in Lifecycle Manager, then power on, uncordon, and resume health checks.",
+      "Hosts without SR-IOV: upgrade via GUI installer, Scripts, ESXCLI, vSphere Auto Deploy, or vSphere Lifecycle Manager.",
+      "vSphere LCM-enabled clusters: follow 'Upgrade a vSphere Lifecycle Manager-enabled Cluster'."
+    ],
+    "snippets": [
+      { "label": "SR-IOV hosts — drain & pause a worker node (ccli on TCA-CP)", "note": "Reference snippet from the guide — verify against the linked doc. Run after SSHing into the TCA-CP VM for the relevant Management Cluster.", "commands": ["ccliPodName=`kubectl get pods -A | grep ccli | awk '{ print $2 }'`", "kubectl exec --stdin --tty $ccliPodName -n tca-cp-cn -- ccli-shell", "ccli>>list mc", "ccli>>go <management cluster index>", "kubectl patch cluster <cluster_name> --type merge -p '{\"spec\": {\"paused\": true}}' -n <cluster_namespace>", "ccli>>list wc", "ccli>>go <workload cluster index>", "kubectl drain <worker_node_name> --ignore-daemonsets --delete-local-data --force"] },
+      { "label": "SR-IOV hosts — after remediation: uncordon & resume health check", "note": "Reference snippet from the guide — verify against the linked doc.", "commands": ["kubectl get nodes", "kubectl uncordon <worker_node_name>", "kubectl patch cluster <cluster_name> --type merge -p '{\"spec\": {\"paused\": false}}' -n <cluster_namespace>"] }
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-upgrade.html"
+  },
+  "vsan": {
+    "title": "Upgrade vSAN Cluster to {target}",
+    "summary": "vSAN is upgraded automatically when you upgrade ESXi hosts. After all hosts are upgraded, optionally upgrade the vSAN cluster objects (on-disk format and HCL DB). See the official vSAN documentation.",
+    "impact": "No additional reboot beyond the ESXi upgrade.",
+    "rollback": "Disk format upgrade is one-way; a previous disk format keeps running, so defer it if unsure.",
+    "considerations": [
+      "The disk format upgrade is optional — a previous on-disk format keeps running, but the latest format provides the complete vSAN feature set.",
+      "Update the vSAN HCL database and verify the cluster is healthy after the upgrade."
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/vsan/vsan/8-0.html"
+  },
+  "aria-orchestrator": {
+    "title": "Upgrade Aria Automation Orchestrator to {target}",
+    "summary": "Final CNF phase. Upgrade Aria Automation Orchestrator (formerly vRealize Orchestrator) to {target}. See the Aria Automation Orchestrator Upgrade Guide for the steps.",
+    "prerequisites": ["VM snapshot taken with memory snapshot deactivated (8.x does not support memory snapshots)."],
+    "rollback": "Restore the VM snapshot.",
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/aria/aria-automation-orchestrator.html"
+  },
+  "aria-products": {
+    "title": "Upgrade Aria Products",
+    "summary": "Upgrade the VMware Aria products in order: Aria Operations for Logs, Aria Operations, Aria Automation Orchestrator, then Aria Operations for Networks. Check compatible versions in the VMware Interoperability Matrix and follow each product's upgrade guide.",
+    "prerequisites": ["Snapshots taken of all Aria deployments (Orchestrator with memory snapshot deactivated; Aria Operations for Networks per KB 55829)."],
+    "rollback": "Restore the respective VM snapshots.",
+    "considerations": [
+      "Aria Operations for Logs — also upgrade the agents in the required VMs to capture data.",
+      "Aria Operations — the NTP service does not start automatically after upgrade and can fail to bring the cluster online; apply KB93793 workaround.",
+      "Aria Operations for Networks — continue using 6.13."
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-cis/aria.html"
+  },
+  "post-upgrade": {
+    "title": "Post-Upgrade Verification",
+    "kind": "checklist",
+    "summary": "After all phases, verify the platform is healthy across infrastructure, compute, storage, and the VIM/NFVI components.",
+    "checklist": [
+      "Network: VLANs inter-routable; ESXi uplinks functioning; MTU correct on physical switches; NTP/DHCP/DNS reachable; external connectivity and external Harbor (if used) reachable.",
+      "Compute: log in to each host client; no warnings or alerts on the Host Client UI.",
+      "Storage: vSAN accessible and healthy.",
+      "NFVI & VIM: management and resource vCenter Servers accessible; cluster properties correct; all vSphere Distributed Switches working with matching MTU; root password expiry per policy; NTP configured on all TCP components.",
+      "VMware Cloud Director: accessible via Avi Load Balancer and individual cell FQDN; registered with vCenter and configured with NSX.",
+      "NSX: Manager and component connection status green; no critical alerts; all edge nodes and ESXi hosts connected."
+    ],
+    "doc": "https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-platform.html"
+  }
+}
