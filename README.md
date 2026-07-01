@@ -3,12 +3,9 @@
 The **TCP Upgrade Planner** is a self-contained, static web tool that generates a guided,
 **step-by-step upgrade runbook** for **VMware Telco Cloud Platform (TCP)**. Pick your source and
 target version and the components you run, and get the upgrade phases in the correct order — with
-detailed guidance, warnings, snapshot/backup reminders, and deep links to the official Broadcom
-Techdocs.
+detailed guidance, warnings, snapshot/backup reminders, and deep links to the official Broadcom Techdocs.
 
-Look and feel is inspired by the [VCF Upgrade Planner](https://vmware.github.io/vcf-upgrade-planner/index.html),
-with an added sticky progress sidebar, per-step completion tracking, a component version matrix, and
-a print/export-to-PDF view.
+
 
 ## Features
 
