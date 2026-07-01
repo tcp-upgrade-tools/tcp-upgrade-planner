@@ -1,6 +1,6 @@
 {
   "CNF": {
-    "label": "CNF Workloads (Tanzu Kubernetes / cloud-native)",
+    "label": "CNF Workloads",
     "summary": "Order taken directly from the 'Upgrade Sequence for CNF Workloads' flowchart: Airgap → Telco Cloud Automation → Harbor → Avi Load Balancer → Tanzu Kubernetes Management Cluster → AKO → Tanzu Kubernetes Workload Cluster, then (for a full-stack upgrade) Aria Automation Orchestrator → NSX → vSphere (vCenter → ESXi → vSAN) for the management and each resource domain.",
     "hasFullStack": true,
     "order": [
@@ -19,7 +19,7 @@
     ]
   },
   "VNF": {
-    "label": "VNF Workloads (Telco Cloud Infrastructure – Cloud Director Edition)",
+    "label": "VNF Workloads",
     "summary": "Order taken from the numbered 'Upgrade Sequence for VNF Workloads' table, applied across the Management, Resource & Edge, and Disaster Recovery pods: VMware Cloud Director → vSphere Replication → Live Site Recovery → NSX (Edge → host VIBs → Manager) → vCenter → ESXi & vSAN → Aria products → Avi Load Balancer.",
     "hasFullStack": false,
     "order": [

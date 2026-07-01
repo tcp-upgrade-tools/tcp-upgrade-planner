@@ -1,4 +1,4 @@
-import { loadData, buildPlan, availableComponents, sourcesFor, intermediatesFor, targets, allSourcesFor, editionsFor, componentCaveat, docUrl } from "./planner.js?v=24";
+import { loadData, buildPlan, availableComponents, sourcesFor, intermediatesFor, targets, allSourcesFor, editionsFor, componentCaveat, docUrl } from "./planner.js?v=25";
 
 const el = (id) => document.getElementById(id);
 const DONE_KEY = "tcp-upgrade-done";
@@ -287,26 +287,36 @@ function allDone(plan) {
   return plan.cards.every((c) => doneSet.has(c.id));
 }
 
+// Builds the static top (path + Your selection + stepper) once; the phase panel swaps in place.
 function renderWalkthrough() {
   const plan = currentPlan;
   const n = plan.cards.length;
-  const card = plan.cards[phaseIndex];
   const doneCount = plan.cards.filter((c) => doneSet.has(c.id)).length;
-  const complete = allDone(plan);
-
   const guideHome = docUrl(DATA, plan.target, "home");
   const head = `<div class="plan-head">
-      <h2>${escape(plan.editionLabel)}</h2>
-      <div class="path-banner"><span class="pb-label">Upgrade path</span> <strong>${escape(routeString(plan.edition, plan.source, plan.target))}</strong></div>
+      <span class="pb-label">Upgrade path</span>
+      <h2>${escape(routeString(plan.edition, plan.source, plan.target))}</h2>
+      <p class="plan-workload">${escape(plan.editionLabel)} · <strong>${n} phases</strong> · <span id="doneCount">${doneCount}</span> complete</p>
       <p class="plan-framing">This runbook outlines the high-level steps to upgrade the required and optional components of VMware Telco Cloud Platform. For detailed instructions, refer to the corresponding component documentation linked in each phase.${guideHome ? ` <a href="${guideHome}" target="_blank" rel="noopener">Open the full TCP ${escape(plan.target)} Upgrade Guide →</a>` : ""}</p>
-      <p class="plan-summary">This upgrade has <strong>${n} phases</strong>. ${doneCount} complete. Walk through them in order — do not skip any.</p>
-      <p class="targets-note">${escape(DATA.versions.targetsNote || "")}</p>
     </div>`;
+
+  el("runbook").innerHTML = head + selectionSummaryHTML(plan) + stepperHTML(plan) + `<div id="phaseHost"></div>`;
+  document.querySelectorAll(".pstep").forEach((b) => {
+    b.addEventListener("click", () => { phaseIndex = Number(b.dataset.i); renderPhase(); });
+  });
+  renderPhase();
+}
+
+// Swaps only the phase card (+ completion banner) and refreshes stepper state — no page jump.
+function renderPhase() {
+  const plan = currentPlan;
+  const n = plan.cards.length;
+  const card = plan.cards[phaseIndex];
+  const complete = allDone(plan);
 
   const banner = complete
     ? `<div class="complete-banner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Upgrade complete — all ${n} phases done.</div>`
     : "";
-
   const phasePanel = `<article class="phase-card">
       <header class="phase-head">
         <span class="phase-tag">Phase ${phaseIndex + 1} of ${n}${doneSet.has(card.id) ? " · ✓ done" : ""}</span>
@@ -324,26 +334,28 @@ function renderWalkthrough() {
       </div>
     </article>`;
 
-  el("runbook").innerHTML = head + banner + selectionSummaryHTML(plan) + stepperHTML(plan) + phasePanel;
-  wireWalkthrough();
-}
+  el("phaseHost").innerHTML = banner + phasePanel;
 
-function wireWalkthrough() {
-  document.querySelectorAll(".pstep").forEach((b) => {
-    b.addEventListener("click", () => { phaseIndex = Number(b.dataset.i); renderWalkthrough(); scrollPhase(); });
+  // Refresh stepper dots/states in place.
+  document.querySelectorAll(".pstep").forEach((b, i) => {
+    const c = plan.cards[i];
+    b.className = "pstep " + (doneSet.has(c.id) ? "done" : i === phaseIndex ? "current" : "todo");
+    const dot = b.querySelector(".pdot");
+    if (dot) dot.textContent = doneSet.has(c.id) ? "✓" : i + 1;
   });
+  const dc = el("doneCount");
+  if (dc) dc.textContent = plan.cards.filter((c) => doneSet.has(c.id)).length;
+
+  // Keep the current step visible in the horizontal stepper without scrolling the page.
+  document.querySelector(".pstep.current")?.scrollIntoView({ inline: "center", block: "nearest" });
+
   const prev = el("prevPhase"), next = el("nextPhase");
-  if (prev) prev.addEventListener("click", () => { if (phaseIndex > 0) { phaseIndex--; renderWalkthrough(); scrollPhase(); } });
+  if (prev) prev.addEventListener("click", () => { if (phaseIndex > 0) { phaseIndex--; renderPhase(); } });
   if (next) next.addEventListener("click", () => {
-    const card = currentPlan.cards[phaseIndex];
-    doneSet.add(card.id); saveDone();
+    doneSet.add(currentPlan.cards[phaseIndex].id); saveDone();
     if (phaseIndex < currentPlan.cards.length - 1) phaseIndex++;
-    renderWalkthrough(); scrollPhase();
+    renderPhase();
   });
-}
-
-function scrollPhase() {
-  el("runbook").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // ---------- Alternate views ----------

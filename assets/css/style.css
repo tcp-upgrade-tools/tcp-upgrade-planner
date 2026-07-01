@@ -211,7 +211,9 @@ svg { flex: none; }
 
 /* ---------- Plan header ---------- */
 .plan-head { margin-bottom: 1.3rem; }
-.plan-head h2 { margin: 0 0 0.6rem; font-size: 1.3rem; }
+.plan-head .pb-label { display: block; margin-bottom: 0.2rem; }
+.plan-head h2 { margin: 0 0 0.3rem; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.plan-workload { color: var(--ink-2); font-size: 0.9rem; margin: 0 0 0.6rem; }
 .path-banner {
   display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap;
   background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent);

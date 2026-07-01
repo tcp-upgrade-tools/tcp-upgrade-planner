@@ -24,6 +24,15 @@ export function docUrl(data, target, id) {
   return guideHome;
 }
 
+// Some phases are split from a single matrix row (e.g. TKG mgmt/workload share the "tkg" row).
+const VERSION_ALIAS = { "tkg-mgmt": "tkg", "tkg-workload": "tkg" };
+
+// The component's version at a given source release (via matrix, honoring split-phase aliases).
+function sourceVersion(data, id, source) {
+  const map = data.versions.components[id] || data.versions.components[VERSION_ALIAS[id]];
+  return map?.[source];
+}
+
 // Target version string for a component at a given destination.
 // Prefer the verbatim procedure-target map; fall back to the historical matrix column.
 function componentTarget(data, id, target) {
@@ -85,7 +94,7 @@ export function availableComponents(data, edition, source) {
       gate: data.components[o.id]?.gate,
       mandatory: !!data.components[o.id]?.mandatory,
       fullStack: !!o.fullStack,
-      sourceVersion: data.versions.components[o.id]?.[source],
+      sourceVersion: sourceVersion(data, o.id, source),
     }));
 }
 
@@ -107,7 +116,7 @@ export function buildPlan(data, edition, source, target, selected) {
       kind: raw.kind,
       doc: docUrl(data, target, id) || raw.doc || meta.doc,
       title: inject(raw.title, version),
-      sourceVersion: data.versions.components[id]?.[source],
+      sourceVersion: sourceVersion(data, id, source),
       targetVersion: version,
       ...resolveCard(raw, version),
       ...extra,
