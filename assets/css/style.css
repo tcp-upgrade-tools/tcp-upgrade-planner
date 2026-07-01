@@ -291,11 +291,6 @@ svg { flex: none; }
 .sec h4 { margin: 0 0 0.5rem; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-dim); }
 .sec ul { margin: 0; padding-left: 1.15rem; }
 .sec li { margin: 0.3rem 0; }
-.chk-list { display: flex; flex-direction: column; gap: 0.1rem; }
-.chk { display: flex; align-items: flex-start; gap: 0.55rem; padding: 0.35rem 0; font-size: 0.9rem; cursor: pointer; border-bottom: 1px solid var(--line); }
-.chk:last-child { border-bottom: none; }
-.chk input { margin-top: 0.2rem; cursor: pointer; flex: none; }
-.chk input:checked + span { color: var(--ink-dim); text-decoration: line-through; }
 .callout { border-left: 3px solid var(--line-2); padding: 0.6rem 0.85rem; margin: 0.7rem 0; border-radius: 0 6px 6px 0; font-size: 0.88rem; background: var(--surface-2); }
 .callout-t { font-weight: 700; }
 .callout.impact { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
