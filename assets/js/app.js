@@ -1,4 +1,4 @@
-import { loadData, buildPlan, availableComponents, sourcesFor, intermediatesFor, targets, allSourcesFor, editionsFor, componentCaveat, docUrl } from "./planner.js?v=26";
+import { loadData, buildPlan, availableComponents, sourcesFor, intermediatesFor, targets, allSourcesFor, editionsFor, componentCaveat, docUrl } from "./planner.js?v=27";
 
 const el = (id) => document.getElementById(id);
 const DONE_KEY = "tcp-upgrade-done";
@@ -309,7 +309,7 @@ function renderPhase() {
   const complete = allDone(plan);
 
   const banner = complete
-    ? `<div class="complete-banner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Upgrade complete — all ${n} phases done.</div>`
+    ? `<div class="complete-banner"><span class="cb-msg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Upgrade complete — all ${n} phases done.</span><button id="restartBtn" class="cb-btn">Start a new plan</button></div>`
     : "";
   const phasePanel = `<article class="phase-card">
       <header class="phase-head">
@@ -324,7 +324,9 @@ function renderPhase() {
         <span class="phase-count">${phaseIndex + 1} / ${n}</span>
         ${phaseIndex < n - 1
           ? `<button id="nextPhase" class="primary-btn">${doneSet.has(card.id) ? "Next →" : "Mark done &amp; Next →"}</button>`
-          : `<button id="nextPhase" class="primary-btn">${complete ? "Finish ✓" : "Mark done &amp; Finish ✓"}</button>`}
+          : complete
+            ? `<span class="phase-done-note">✓ All phases complete</span>`
+            : `<button id="nextPhase" class="primary-btn">Mark done &amp; Finish ✓</button>`}
       </div>
     </article>`;
 
@@ -343,12 +345,15 @@ function renderPhase() {
   // Keep the current step visible in the horizontal stepper without scrolling the page.
   document.querySelector(".pstep.current")?.scrollIntoView({ inline: "center", block: "nearest" });
 
-  const prev = el("prevPhase"), next = el("nextPhase");
+  const prev = el("prevPhase"), next = el("nextPhase"), restart = el("restartBtn");
   if (prev) prev.addEventListener("click", () => { if (phaseIndex > 0) { phaseIndex--; renderPhase(); } });
+  if (restart) restart.addEventListener("click", () => showWizard());
   if (next) next.addEventListener("click", () => {
     doneSet.add(currentPlan.cards[phaseIndex].id); saveDone();
     if (phaseIndex < currentPlan.cards.length - 1) phaseIndex++;
     renderPhase();
+    // On completion, bring the "Upgrade complete" banner into view (it renders above the panel).
+    if (allDone(currentPlan)) document.querySelector(".complete-banner")?.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 }
 
