@@ -1,6 +1,6 @@
 # VMware Telco Cloud Platform — Upgrade Planner
 
-### 🔗 [VMware Telco Cloud Platform Upgrade Planner Tool](https://anupamam1.github.io/tcp-upgrade-planner/)
+### 🔗 [VMware Telco Cloud Platform Upgrade Planner Tool](https://tcp-upgrade-tools.github.io/tcp-upgrade-planner/)
 
 The **TCP Upgrade Planner** is a self-contained, static web tool that generates a guided,
 **step-by-step upgrade runbook** for **VMware Telco Cloud Platform (TCP)**. Pick your source and
