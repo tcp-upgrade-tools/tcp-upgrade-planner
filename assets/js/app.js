@@ -1,4 +1,4 @@
-import { loadData, buildPlan, availableComponents, sourcesFor, intermediatesFor, targets, allSourcesFor, editionsFor, componentCaveat, docUrl } from "./planner.js?v=22";
+import { loadData, buildPlan, availableComponents, sourcesFor, intermediatesFor, targets, allSourcesFor, editionsFor, componentCaveat, docUrl } from "./planner.js?v=23";
 
 const el = (id) => document.getElementById(id);
 const DONE_KEY = "tcp-upgrade-done";
@@ -21,6 +21,13 @@ function sourceLabel(v) {
 
 function currentEdition() {
   return document.querySelector('input[name="edition"]:checked')?.value || Object.keys(DATA.sequence)[0];
+}
+
+// Clean version label: "src → tgt" only when the source is a single version;
+// when the guide lists several possible patches (contains / , or "or"), show just "→ tgt".
+function verSpan(src, tgt) {
+  const multi = !src || src === "NA" || /[\/,]|\bor\b/.test(src);
+  return multi ? `→ ${escape(tgt)}` : `${escape(src)} → ${escape(tgt)}`;
 }
 
 // Full resolved route incl. intermediate platform hops, e.g.
@@ -143,9 +150,7 @@ function renderComponents(edition, source, target) {
 
 function ckRow(c, target) {
   const tgt = DATA.versions.targets?.[target]?.[c.id] || DATA.versions.components[c.id]?.[target] || target;
-  const ver = c.sourceVersion && c.sourceVersion !== "NA"
-    ? `<span class="ck-ver">${escape(c.sourceVersion)} → ${escape(tgt)}</span>`
-    : `<span class="ck-ver">→ ${escape(tgt)}</span>`;
+  const ver = `<span class="ck-ver">${verSpan(c.sourceVersion, tgt)}</span>`;
   const lock = c.mandatory ? ` <span class="ck-lock" title="Mandatory dependency — cannot be skipped">Required</span>` : "";
   const gate = !c.mandatory && c.gate ? `<span class="ck-gate">${escape(c.gate)}</span>` : "";
   const dis = c.mandatory ? "checked disabled" : "checked";
@@ -228,8 +233,7 @@ function selectionSummaryHTML(plan) {
   const hasInfra = plan.cards.some((c) => ["nsx", "vcenter", "esxi", "vsan", "aria-orchestrator"].includes(c.id));
   const scope = hasFS ? (hasInfra ? "Full-stack (incl. infrastructure)" : "CNF layer only") : "Full deployment";
   const rows = comps.map((c) => {
-    const v = c.sourceVersion && c.sourceVersion !== "NA" ? `${escape(c.sourceVersion)} → ${escape(c.targetVersion)}` : `→ ${escape(c.targetVersion)}`;
-    return `<li><span class="sc-name">✓ ${escape(c.name)}</span><span class="sc-ver">${v}</span></li>`;
+    return `<li><span class="sc-name">✓ ${escape(c.name)}</span><span class="sc-ver">${verSpan(c.sourceVersion, c.targetVersion)}</span></li>`;
   }).join("");
   return `<section class="summary-card">
     <h3>Your selection</h3>
@@ -281,7 +285,7 @@ function renderWalkthrough() {
       <header class="phase-head">
         <span class="phase-tag">Phase ${phaseIndex + 1} of ${n}${doneSet.has(card.id) ? " · ✓ done" : ""}</span>
         <h3>${escape(card.title)}</h3>
-        ${card.kind !== "checklist" ? `<span class="ver">${card.sourceVersion && card.sourceVersion !== "NA" ? escape(card.sourceVersion) + " → " : "→ "}${escape(card.targetVersion)}</span>` : ""}
+        ${card.kind !== "checklist" ? `<span class="ver">${verSpan(card.sourceVersion, card.targetVersion)}</span>` : ""}
         ${card.formerly ? `<span class="formerly">formerly ${escape(card.formerly)}</span>` : ""}
       </header>
       <div class="phase-body">${phaseBodyHTML(card)}</div>
