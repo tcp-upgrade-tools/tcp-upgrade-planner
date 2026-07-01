@@ -13,12 +13,12 @@ a print/export-to-PDF view.
 
 - **Edition aware** — separate ordered sequences for **CNF** (Tanzu Kubernetes) and **VNF**
   (Cloud Director Edition) workloads.
-- **Source → target selection** — supported paths to TCP 5.1, including chained/intermediate hops.
+- **Source → target selection** 
 - **Consolidated steps** — per-component procedures curated from the PDF so you rarely need the
   original guide; every card links back to official docs.
 - **Cross-cutting cards** — Pre-Upgrade Checklist + Snapshot/Backup first, Post-Upgrade Checklist last.
 - **Progress tracking** — mark steps done; state persists in `localStorage`.
-- **Components** view — full component version matrix across releases 3.0 → 5.1.
+- **Components** view 
 - **Upgrade Path** view — all supported source→target routes and important notes.
 - **Dark/light theme**, responsive layout, and a clean **Print → PDF** stylesheet.
 
