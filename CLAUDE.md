@@ -44,6 +44,20 @@ the docs — not a docs replacement. Inspired by VMware's VCF upgrade planner.
   own matrix row) — that value is accurate, but a silent default is still a silent default: the user
   never had to confirm it. Removed as a user-directed fix (2026-07). If you're tempted to re-add a
   "confident default" exception for some future component, don't — ask first.
+- **"Change options" regenerates in place and preserves progress; "Start a new plan" always resets.**
+  Both buttons call `showWizard()` (just un-hides the still-populated wizard, doesn't touch state),
+  so the actual reset-vs-preserve decision happens in `generate()`, keyed off whether
+  source|target|edition matches the *last* generated plan (`lastPlanKey`). Same upgrade (user only
+  touched component/version selections) → `doneSet` is filtered to intersect the new plan's card
+  ids (phases that no longer exist correctly lose their done-mark; phases that still exist keep
+  theirs — this works because `doneSet` is keyed by component id, not phase index, so it's already
+  resilient to reordering) and `phaseIndex` is re-resolved by the *id* of the phase the user was
+  previously viewing, not its raw numeric position (insertions/removals elsewhere in the sequence
+  shift indices without changing what phase you're looking at). Different upgrade, or the "Start a
+  new plan" button specifically (it force-sets `lastPlanKey = null` before showing the wizard, since
+  its label promises a clean slate even if the user re-picks identical values) → full reset. Added
+  as a user-directed fix (2026-07) after "Change options" was found to silently discard all marked-
+  done progress on every regenerate, identical selections or not.
 - **Kubernetes version vs. TKG product version — both must be shown, they're not the same thing.**
   `card.sourceVersion`/`targetVersion` for `tkg-mgmt`/`tkg-workload` is the Tanzu Kubernetes Grid
   *product* release (e.g. `2.1.1 → 2.5.2`, from the `tkg` matrix row). The Kubernetes version the
