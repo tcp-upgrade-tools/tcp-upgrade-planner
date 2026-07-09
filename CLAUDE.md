@@ -35,6 +35,24 @@ the docs — not a docs replacement. Inspired by VMware's VCF upgrade planner.
   questions, plus an "Infrastructure layer — full-stack upgrade" master toggle (the flowchart's
   Full-Stack Yes/No; all-or-nothing). Multi-version source cells (e.g. NSX `4.1.0.2 / 4.1.1`) render
   a dropdown to pick the current version; single-value cells show plain text.
+- **Never silently default an ambiguous "current version" picker — always require an explicit pick.**
+  Every `<select class="ck-srcsel">` rendered for a multi-option matrix cell (`ckRow` in app.js)
+  starts on a blank `"— select —"` placeholder, is marked `required`, and blocks the Generate
+  button (`validateGenerate`) until the user actively chooses — same treatment as the Kubernetes
+  current-version pickers (`ckK8sPicker`). This applies even to TCA, which used to be a special
+  case pre-filled to the TCP-source-implied nominal version (e.g. TCP 4.0 → TCA 3.1, per the guide's
+  own matrix row) — that value is accurate, but a silent default is still a silent default: the user
+  never had to confirm it. Removed as a user-directed fix (2026-07). If you're tempted to re-add a
+  "confident default" exception for some future component, don't — ask first.
+- **Kubernetes version vs. TKG product version — both must be shown, they're not the same thing.**
+  `card.sourceVersion`/`targetVersion` for `tkg-mgmt`/`tkg-workload` is the Tanzu Kubernetes Grid
+  *product* release (e.g. `2.1.1 → 2.5.2`, from the `tkg` matrix row). The Kubernetes version the
+  user actually picked (and its computed final target, from `k8sChainFor`) is a separate fact,
+  stored on the card as `card.k8sVersion = { from, to }` (set in `generate()`). Both are rendered in
+  three places: the "Components to upgrade" summary (`selectionSummaryHTML`, `.sc-k8s`), the
+  per-phase header (`.ver-k8s`), and the Markdown export (`_Kubernetes: X → Y_` line). Only the TKG
+  line existed originally — the Kubernetes line was missing everywhere until a user-reported fix
+  (2026-07); if you add a new render surface for these cards, wire both.
 - **Runbook**: H2 title is the **upgrade path** (e.g. `TCP 3.0 → TCP 5.0.2`), workload as subtitle;
   then compact "Your selection"; a horizontal stepper; then one phase panel at a time. Back/Next swap
   ONLY the phase panel in place (`renderWalkthrough` builds the static top once; `renderPhase` swaps
@@ -63,6 +81,25 @@ column**:
 
 TKG is split into `tkg-mgmt`/`tkg-workload`; their source version aliases to the `tkg` matrix row
 (`VERSION_ALIAS` in planner.js) so e.g. TCP 3.0 shows `2.1.1 → 2.5.2`.
+
+`bma` (Bare Metal Automation) has real versions through TCP 5.0.2 but **no 5.1 cell** — confirmed
+by a full-document search of the TCP 5.1 PDF (not just the upgrade-guide chapter), zero hits for
+"Bare Metal Automation" anywhere in it. Per the user (project owner), this is real: BMA was
+discontinued as of TCP 5.1 — customers use their own third-party tooling instead. `versions.json`
+reflects this as `"5.1": "Discontinued"` (not a blank/omitted key), with a `notes.bma` explanation;
+the Components Matrix view renders whatever string is there directly (`app.js` `renderComponentsView`
+iterates `Object.entries(DATA.versions.components)` — every row shows, whether or not it's also in
+`components.json`'s selectable-component list).
+
+`k8s-hops.json`'s `mgmtWorkloadCompat` map now has entries for management versions `1.28.4` and
+`1.28.7` too (not just the "real" published-table versions) — derived from the Workload Cluster
+Kubernetes Version table's per-row "Upgrade Management Cluster vX->v1.28.11" step annotations, since
+those two management versions are transitional/pass-through and have no compatibility table of
+their own. Without an entry, `compatibleWorkloadVersions()` falls back to the *unfiltered* full
+workload list (intentional fallback for genuinely unpublished cases — see its doc comment in
+planner.js), which was wrongly offering workload starting points that require management to already
+be at its final target (1.28.11) even when management was still shown at 1.28.4/1.28.7. If you add a
+new transitional/pass-through version anywhere in this file, check whether the same gap exists.
 
 Paths: for 5.0.2 (guide p239), CNF sources 3.0/4.0/4.0.1/5.0/5.0.1 → 5.0.2. VNF same + TCI-CDE 3.0
 (direct), 2.7 (→ 3.0 → 5.0.2 platform hop), 2.2 (direct; VCD component chain
@@ -152,8 +189,29 @@ Telco Cloud Platform to release X.Y" sentence before trusting its filename.
 
 ## Conventions / gotchas
 - **Cache busting:** index.html references style.css/app.js with `?v=N`; app.js imports planner.js
-  with `?v=N`; bump N on any JS/CSS change (currently **v31**). `data/*.json` fetched with
-  `cache: "no-store"`.
+  with `?v=N`; bump N on any JS/CSS change (drifts over time — check index.html for the current
+  number, don't trust an old value written here). `data/*.json` fetched with `cache: "no-store"`.
+- **The curated `tools/*_text.txt` extracts are NOT the full source — verify against the actual PDF
+  before calling something in `data/*.json` invented.** `tools/extract.py`'s `tca`/`tca34` modes
+  slice a hand-picked line range out of `pdftotext -layout` output for the Kubernetes-hops chapter.
+  Those ranges are narrower than the real chapter: for TCA 3.3.0.1, the curated range ends *before*
+  both the "Management Clusters/Workload Cluster Compatibility Cluster Operations" tables (full PDF
+  ~line 12040) and the dedicated "Upgrade 2.3 Cluster to 3.3.0.1" / "Upgrade 3.1.1 Cluster to
+  3.3.0.1" walkthroughs (full PDF ~line 12858–12908, printed pages 266–268) that several
+  `componentCaveats` entries in `paths.json` are actually sourced from. A verification pass that
+  only greps the curated `.txt` file will find zero hits for those sections and wrongly conclude the
+  caveats are fabricated — they aren't; they're just outside the curated slice. If a `.txt`-based
+  check flags something as unsourced/invented, re-run `pdftotext -layout <pdf> -` (or `pdfinfo` +
+  `Read` with a `pages` range to view it visually) on the **full** PDF before concluding it's a bug.
+  This actually happened during a full-repo audit (2026-07) — two "fabrication" findings were false
+  positives from this exact gap.
+- **pdftotext -layout table cells that wrap across multiple physical lines are ambiguous — visually
+  inspect the PDF page (`Read` with a `pages` range) before trusting a linearized reading.** Found
+  during the same audit: several Kubernetes workload hop-chain cells in the TCA compatibility tables
+  span 2+ wrapped lines per column, and naively reading the linearized text produced a self-
+  contradictory parse (one column's continuation appeared to skip an earlier waypoint another column
+  visibly passed through). Rendering the actual PDF page as an image and reading the real table grid
+  resolved it in every case and is the more reliable method whenever a table cell wraps.
 - CSS MUST keep `[hidden]{display:none!important}` — otherwise `display:flex/grid` overrides the HTML
   `hidden` attribute (this bug made the toolbar show on the landing page).
 - All external doc links open a new tab (`target="_blank" rel="noopener"`).
@@ -161,6 +219,22 @@ Telco Cloud Platform to release X.Y" sentence before trusting its filename.
 - **Core principle (user-enforced): NEVER invent steps, versions, or tables — everything must trace
   to the TCP upgrade guide.** Confirm design choices before building. Prefer generic wording (avoid
   "Tanzu" / "Cloud Director" in UI labels and README).
+
+## Verifying UI changes without chromium-cli/playwright
+On at least one machine this repo was worked from, `chromium-cli` wasn't installed and `pip
+install playwright` failed (sandboxed, no network egress to PyPI) — but a local Chrome.app was
+present. Fallback that worked: launch `Google Chrome.app` headless with
+`--headless=new --remote-debugging-port=PORT --user-data-dir=<scratch dir>`, then drive it with a
+short pure-stdlib Python script that speaks the Chrome DevTools Protocol directly (HTTP `PUT
+/json/new?<url>` to open a tab — note **PUT**, not GET, on recent Chrome; a raw WebSocket client
+using only `socket`/`struct`/`base64` for the handshake and frame (un)masking; `Runtime.evaluate`
+with `awaitPromise: true` to run an async driver script in-page and get a JSON result back). This
+reproduces real DOM events (`dispatchEvent(new Event('change', {bubbles:true}))` on selects/
+checkboxes/radios — this app is vanilla JS, not React, so a plain property set + change event is
+enough, no synthetic-event library needed) end-to-end, including clicking Generate and reading the
+rendered runbook. Check for both `Runtime.exceptionThrown` and `Log.entryAdded` (level `error`)
+during the session — ignore a `favicon.ico` 404, that's harmless. If `chromium-cli`/playwright ARE
+available next time, prefer those; this is only the no-network fallback.
 
 ## Continuing from another computer
 1. `git clone https://github.com/tcp-upgrade-tools/tcp-upgrade-planner`
