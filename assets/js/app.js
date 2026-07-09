@@ -6,6 +6,7 @@ const DONE_KEY = "tcp-upgrade-done";
 let DATA = null;
 let currentPlan = null;
 let phaseIndex = 0;
+let lastPlanKey = null; // source|target|edition of the last generated plan — see generate()
 let fullStackOn = true;
 let sourceChoice = {}; // componentId -> user-picked current version (when the guide lists several)
 let k8sChoice = { mgmt: null, workload: null }; // phase -> user-picked current Kubernetes version
@@ -381,6 +382,10 @@ function generate() {
   const edition = currentEdition();
   const source = el("source").value;
   const target = el("destination").value;
+  // Remember which phase the user was actually looking at (by id, not index) so a regenerate for
+  // the same upgrade can put them back on it — insertions/removals elsewhere in the sequence would
+  // otherwise silently bump them to an unrelated phase at the same numeric position.
+  const priorCardId = currentPlan?.cards[phaseIndex]?.id;
   // Selected = checked component boxes (data-comp); the infra master toggle is excluded.
   const selected = new Set([...document.querySelectorAll('#components input[data-comp]:checked')].map((c) => c.dataset.comp));
   // Capture any current-version picks (defaults to the shown option if untouched).
@@ -403,9 +408,24 @@ function generate() {
       card.k8sVersion = { from: chosen, to: result.finalTarget };
     }
   }
-  phaseIndex = 0;
-  // Start every generated runbook fresh — no carry-over of completion from a previous run.
-  doneSet = new Set();
+  // A regenerate for the *same* source/destination/workload (i.e. the user hit "Change options"
+  // and only adjusted which components/versions are included, then re-generated) keeps progress —
+  // doneSet is keyed by component id, which is stable across a regenerate, so any phase that still
+  // exists in the new plan keeps its done mark; phases that no longer exist correctly drop theirs
+  // (there's nothing to preserve — they're not part of the plan anymore). A genuinely different
+  // source/destination/workload is a different upgrade path entirely, so that starts fresh.
+  const planKey = `${source}|${target}|${edition}`;
+  const sameUpgrade = planKey === lastPlanKey;
+  lastPlanKey = planKey;
+  if (sameUpgrade) {
+    const validIds = new Set(currentPlan.cards.map((c) => c.id));
+    doneSet = new Set([...doneSet].filter((id) => validIds.has(id)));
+    const samePhaseIdx = priorCardId ? currentPlan.cards.findIndex((c) => c.id === priorCardId) : -1;
+    phaseIndex = samePhaseIdx >= 0 ? samePhaseIdx : Math.min(phaseIndex, currentPlan.cards.length - 1);
+  } else {
+    doneSet = new Set();
+    phaseIndex = 0;
+  }
   saveDone();
   setActiveNav("plan");
   el("wizardCard").hidden = true;
@@ -559,7 +579,15 @@ function renderPhase() {
 
   const prev = el("prevPhase"), next = el("nextPhase"), restart = el("restartBtn");
   if (prev) prev.addEventListener("click", () => { if (phaseIndex > 0) { phaseIndex--; renderPhase(); } });
-  if (restart) restart.addEventListener("click", () => showWizard());
+  if (restart) restart.addEventListener("click", () => {
+    // Unlike "Change options" (which regenerates in place and preserves progress for an
+    // unchanged upgrade), "Start a new plan" always promises a clean slate — force the next
+    // generate() to treat it as a different upgrade even if the user re-picks identical values.
+    lastPlanKey = null;
+    doneSet = new Set();
+    saveDone();
+    showWizard();
+  });
   if (next) next.addEventListener("click", () => {
     doneSet.add(currentPlan.cards[phaseIndex].id); saveDone();
     if (phaseIndex < currentPlan.cards.length - 1) phaseIndex++;
