@@ -88,7 +88,9 @@ svg { flex: none; }
   border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30;
   box-shadow: 0 1px 2px rgba(15, 30, 39, 0.04);
 }
-.brand { display: flex; align-items: center; gap: 0.7rem; }
+.brand { display: flex; align-items: center; gap: 0.7rem; text-decoration: none; color: inherit; cursor: pointer; border-radius: var(--radius); }
+.brand:hover { opacity: 0.82; }
+.brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .brand-mark { width: 24px; height: 24px; fill: var(--accent); stroke: none; flex: none; }
 .topbar h1 { font-size: 1rem; margin: 0; font-weight: 600; line-height: 1.2; color: var(--ink); }
 .topbar h1 span { font-weight: 400; color: var(--ink-2); }
@@ -303,6 +305,10 @@ svg { flex: none; }
 .sec li { margin: 0.3rem 0; }
 .sec.impact { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 0.6rem 0.85rem; border-radius: 0 var(--radius) var(--radius) 0; }
 .sec.impact h4 { color: var(--warn); }
+.chk-list { list-style: none; padding-left: 0; }
+.chk-list li { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.28rem 0; border-bottom: 1px solid var(--line); }
+.chk-list li:last-child { border-bottom: none; }
+.chk-mark { color: var(--ok); font-weight: 700; flex: none; line-height: 1.4; }
 .callout { border-left: 3px solid var(--line-2); padding: 0.6rem 0.85rem; margin: 0.7rem 0; border-radius: 0 var(--radius) var(--radius) 0; font-size: 0.88rem; background: var(--surface-2); }
 .callout-t { font-weight: 700; }
 .callout.impact { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
@@ -333,9 +339,25 @@ svg { flex: none; }
 .footer a { color: var(--accent); }
 
 /* ---------- PDF export holder ---------- */
-.pdf-holder { position: fixed; left: -10000px; top: 0; width: 800px; background: #fff; color: #111; padding: 16px; }
+/* Must stay in normal document flow (no position:fixed/absolute) — html2canvas (via html2pdf.js)
+   captures blank content for out-of-flow elements regardless of offset, a known limitation. It's
+   appended at the end of <body> and masked by .pdf-overlay while rendering instead. */
+/* Width must fit within an A4 page's printable area at 96dpi (210mm - 2x10mm jsPDF margin ≈
+   718px) — html2pdf.js does NOT scale wide content down to fit; it clips at the page edge, which
+   was cropping text on every page. box-sizing:border-box keeps the padding inside this budget
+   rather than adding to it. 680px leaves a safety margin for rounding/font-metric slop. */
+.pdf-holder { width: 680px; box-sizing: border-box; background: #fff; color: #111; padding: 16px; }
 .pdf-holder .phase-card { box-shadow: none; border: 1px solid #ccc; margin-bottom: 12px; break-inside: avoid; }
 .pdf-holder .cmd { white-space: pre-wrap; word-break: break-word; background: #f4f6f8; color: #111; border: 1px solid #ddd; }
+.pdf-holder .pdf-subtitle { font-size: 1.05rem; font-weight: 600; color: #0072a3; margin: -8px 0 12px; }
+.pdf-holder .pdf-end { border: 1px solid #318700; border-left: 3px solid #318700; background: #eef7e8; color: #1f5c00; border-radius: 4px; padding: 14px 18px; margin-top: 16px; }
+.pdf-holder .pdf-end h2 { margin: 0 0 6px; color: #1f5c00; font-size: 1.1rem; }
+.pdf-holder .pdf-end p { margin: 4px 0; font-size: 0.85rem; }
+.pdf-holder .pdf-end a { color: #0072a3; }
+.pdf-overlay { position: fixed; inset: 0; z-index: 9999; background: var(--surface); color: var(--ink); display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 500; }
+
+/* ---------- Print (full runbook) ---------- */
+.print-only { display: none; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 720px) {
@@ -347,8 +369,11 @@ svg { flex: none; }
 
 /* ---------- Print ---------- */
 @media print {
-  .topbar, .content-actions, .stepper, .phase-nav, .footer, #print, .summary-card { display: none !important; }
+  /* The interactive view only ever holds one phase at a time (Back/Next swap it in place) — print
+     the dedicated #printFull container (all phases, built fresh via fullRunbookHTML) instead. */
+  .topbar, .content-actions, .stepper, .phase-nav, .footer, #print, .summary-card, #runbook, .wizard-card { display: none !important; }
   body { background: #fff; color: #000; }
   .content { max-width: none; padding: 0; }
-  .phase-card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+  .print-only { display: block; }
+  .print-only .phase-card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; margin-bottom: 12px; }
 }

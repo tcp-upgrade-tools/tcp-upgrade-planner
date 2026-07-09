@@ -10,18 +10,18 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@cds/city@1.1.0/css/bundles/default.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="assets/css/style.css?v=39" />
+  <link rel="stylesheet" href="assets/css/style.css?v=46" />
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
+    <a href="#" class="brand" id="homeBtn" title="Back to plan options" aria-label="Back to plan options">
       <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       <div>
         <h1>Telco Cloud Platform <span>Upgrade Planner</span></h1>
         <p class="tagline">Plan a guided, phase-by-phase upgrade.</p>
       </div>
-    </div>
+    </a>
     <nav class="mainnav" aria-label="Primary">
       <a href="#plan" class="nav-link active" data-view="plan">Plan</a>
       <a href="#components" class="nav-link" data-view="components">Components</a>
@@ -85,12 +85,13 @@
     </div>
 
     <section class="runbook" id="runbook"></section>
+    <section id="printFull" class="print-only"></section>
   </main>
 
   <footer class="footer">
     <p>Curated from the <strong>VMware Telco Cloud Platform</strong> documentation. Always confirm against the official <a href="https://techdocs.broadcom.com/us/en/vmware-tnz/telco-cloud-platform.html" target="_blank" rel="noopener">Broadcom Techdocs</a> before executing an upgrade.</p>
   </footer>
 
-  <script type="module" src="assets/js/app.js?v=43"></script>
+  <script type="module" src="assets/js/app.js?v=52"></script>
 </body>
 </html>

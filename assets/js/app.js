@@ -1,4 +1,4 @@
-import { loadData, buildPlan, availableComponents, sourcesFor, intermediatesFor, targets, allSourcesFor, editionsFor, componentCaveat, docUrl, k8sVersionsFor, k8sChainFor, compatibleWorkloadVersions, tkgReleaseFor, tcaSourcesFor, k8sDefaultsForTca } from "./planner.js?v=37";
+import { loadData, buildPlan, availableComponents, sourcesFor, intermediatesFor, targets, allSourcesFor, editionsFor, componentCaveat, docUrl, k8sVersionsFor, k8sChainFor, compatibleWorkloadVersions, tkgReleaseFor, tcaSourcesFor, k8sDefaultsForTca, groupTanzuForDisplay } from "./planner.js?v=38";
 
 const el = (id) => document.getElementById(id);
 const DONE_KEY = "tcp-upgrade-done";
@@ -31,6 +31,13 @@ function currentEdition() {
 function verSpan(src, tgt) {
   const multi = !src || src === "NA" || /[\/,]|\bor\b/.test(src);
   return multi ? `→ ${escape(tgt)}` : `${escape(src)} → ${escape(tgt)}`;
+}
+
+// A bare "1.24.10 → 1.30.2" reads as a single direct jump — flag when it's actually a multi-step
+// chain (the full waypoint-by-waypoint breakdown lives in the phase body, not here) so compact
+// views (summary card, phase header, markdown) aren't misleading about what's actually involved.
+function hopsQualifier(v) {
+  return v.hops > 1 ? ` (${v.hops}-step upgrade)` : "";
 }
 
 // Split a matrix cell like "4.1.0.2 / 4.1.1" or "8.0b or 8.0 U1" into individual versions.
@@ -168,6 +175,7 @@ function applyTcaK8sDefaultsAndRefresh(target) {
   }
   refreshWorkloadPicker(target);
   refreshMgmtTkgLabel(target);
+  refreshAirgapLabel(target);
   validateGenerate();
 }
 
@@ -281,6 +289,13 @@ function refreshMgmtTkgLabel(target) {
   span.innerHTML = mgmtTkgLabelHTML(target);
 }
 
+function refreshAirgapLabel(target) {
+  const span = document.querySelector(".ck-airgapver");
+  if (!span) return;
+  const tgt = DATA.versions.targets?.[target]?.["airgap"] || DATA.versions.components.airgap?.[target] || target;
+  span.innerHTML = verSpan(sourceChoice["tca"] || DATA.versions.components.airgap?.[el("source").value], tgt);
+}
+
 // Blocks Generate until every checked tkg-mgmt/tkg-workload row has a Kubernetes version chosen
 // (only when this target/phase actually has a compatibility table — falls back to the static
 // per-TCP-source caveat otherwise, so a future target without k8s-hops data never gets stuck).
@@ -337,6 +352,11 @@ function ckRow(c, target) {
       opts.map((o) => `<option value="${escape(o)}" ${o === chosen ? "selected" : ""}>${escape(o)}</option>`).join("");
     const title = c.id === "tca" ? "Select your current TCA version (the version implied by your TCP source is listed among the options)" : "Select your current version";
     ver = `<span class="ck-ver ck-pick" title="${title}"><select class="ck-srcsel" data-comp="${c.id}" required>${options}</select> &rarr; ${escape(tgt)}</span>`;
+  } else if (c.id === "airgap") {
+    // Airgap Server's matrix row is always identical to TCA's, value-for-value, in every release
+    // (it's a TCA component) — track a TCA override here too, not the stale nominal TCP-source
+    // value, kept live via refreshAirgapLabel() on the TCA dropdown's change handler.
+    ver = `<span class="ck-ver ck-airgapver">${verSpan(sourceChoice["tca"] || c.sourceVersion, tgt)}</span>`;
   } else {
     ver = `<span class="ck-ver">${verSpan(c.sourceVersion, tgt)}</span>`;
   }
@@ -391,8 +411,15 @@ function generate() {
   // Capture any current-version picks (defaults to the shown option if untouched).
   document.querySelectorAll('.ck-srcsel').forEach((sel) => { sourceChoice[sel.dataset.comp] = sel.value; });
   currentPlan = buildPlan(DATA, edition, source, target, selected);
-  // Apply the user's chosen current version so each phase reads "<chosen> → <target>".
-  currentPlan.cards.forEach((card) => { if (sourceChoice[card.id]) card.sourceVersion = sourceChoice[card.id]; });
+  // Apply the user's chosen current version so each phase reads "<chosen> → <target>". Airgap
+  // Server has no picker of its own (its matrix row is always identical to TCA's, value-for-value
+  // in every release — it's a TCA component) — if the user overrode TCA's current version for
+  // drift, Airgap Server must track the same override, not silently keep showing the stale nominal
+  // TCP-source-implied value.
+  currentPlan.cards.forEach((card) => {
+    const ver = sourceChoice[card.id] || (card.id === "airgap" ? sourceChoice["tca"] : null);
+    if (ver) card.sourceVersion = ver;
+  });
   // Replace the static per-TCP-source caveat with the exact computed hop chain for the
   // Tanzu phases, using the Kubernetes version the user picked in the wizard.
   for (const [compId, phase] of Object.entries(K8S_PICKER_PHASE)) {
@@ -405,7 +432,11 @@ function generate() {
       // The card's own sourceVersion/targetVersion are the TKG *product* release (e.g. 2.1.1 →
       // 2.5.2) — keep the Kubernetes version the user actually picked alongside it, since the
       // summary and phase header otherwise only show the TKG label and lose this entirely.
-      card.k8sVersion = { from: chosen, to: result.finalTarget };
+      // hops = number of transitions in the waypoint chain (waypoints.length - 1) — surfaced so
+      // compact views (summary card, phase header, markdown) can flag a multi-step chain instead
+      // of showing "1.24.10 → 1.30.2" in a way that reads as a single direct jump; the full
+      // waypoint-by-waypoint breakdown lives in card.k8sChain, rendered in the phase body itself.
+      card.k8sVersion = { from: chosen, to: result.finalTarget, hops: result.waypoints.length - 1 };
     }
   }
   // A regenerate for the *same* source/destination/workload (i.e. the user hit "Change options"
@@ -446,6 +477,15 @@ function listSection(title, items, cls) {
   return `<div class="sec ${cls || ""}"><h4>${escape(title)}</h4><ul>${items.map((i) => `<li>${escape(i)}</li>`).join("")}</ul></div>`;
 }
 
+// Checklist items (kind:"checklist" phases only) render with a green checkmark instead of a plain
+// bullet, for quick visual scanning — decorative only, not interactive/tickable (a per-item ticking
+// UX was tried before and reverted; this is deliberately just a static visual treatment, same in
+// the interactive view, PDF export, and print, since it carries no state).
+function checklistSection(title, items) {
+  if (!items || !items.length) return "";
+  return `<div class="sec checklist-sec"><h4>${escape(title)}</h4><ul class="chk-list">${items.map((i) => `<li><span class="chk-mark" aria-hidden="true">&#10003;</span>${escape(i)}</li>`).join("")}</ul></div>`;
+}
+
 function calloutSection(title, text, cls) {
   if (!text) return "";
   return `<div class="callout ${cls}"><span class="callout-t">${escape(title)}</span> ${escape(text)}</div>`;
@@ -469,7 +509,7 @@ function phaseBodyHTML(card) {
   const cav = card.k8sChain || (currentPlan && componentCaveat(DATA, currentPlan.target, currentPlan.source, card.id));
   if (Array.isArray(cav)) body += listSection("Required version sequence", cav, "impact");
   else if (cav) body += calloutSection("Required version sequence", cav, "impact");
-  if (card.kind === "checklist") body += listSection("Checklist", card.checklist, "checklist-sec");
+  if (card.kind === "checklist") body += checklistSection("Checklist", card.checklist);
   body += listSection("Prerequisites", card.prerequisites, "prereq");
   body += calloutSection("Service impact", card.impact, "impact");
   body += calloutSection("Rollback", card.rollback, "rollback");
@@ -480,13 +520,16 @@ function phaseBodyHTML(card) {
 }
 
 function selectionSummaryHTML(plan) {
-  const comps = plan.cards.filter((c) => c.kind !== "checklist");
+  // Display-only grouping (AKO sits between the two Tanzu phases in the real, guide-required
+  // execution order — see groupTanzuForDisplay's doc comment); plan.cards itself is untouched, so
+  // the phase stepper/walkthrough elsewhere keeps the real order.
+  const comps = groupTanzuForDisplay(plan.cards.filter((c) => c.kind !== "checklist"));
   const hasFS = !!DATA.sequence[plan.edition]?.hasFullStack;
   const hasInfra = plan.cards.some((c) => c.fullStack);
   const scope = hasFS ? (hasInfra ? "Full-stack (includes infrastructure layer)" : "CNF layer only") : null;
   const items = comps.map((c) => {
     const k8s = c.k8sVersion
-      ? `<span class="sc-ver sc-k8s">Kubernetes ${escape(c.k8sVersion.from)} &rarr; ${escape(c.k8sVersion.to)}</span>` : "";
+      ? `<span class="sc-ver sc-k8s">Kubernetes ${escape(c.k8sVersion.from)} &rarr; ${escape(c.k8sVersion.to)}${escape(hopsQualifier(c.k8sVersion))}</span>` : "";
     return `<div class="sum-item"><span class="sc-name">${escape(c.name)}</span><span class="sc-vers"><span class="sc-ver">${verSpan(c.sourceVersion, c.targetVersion)}</span>${k8s}</span></div>`;
   }).join("");
   return `<section class="summary-card">
@@ -547,7 +590,7 @@ function renderPhase() {
         <span class="phase-tag">Phase ${phaseIndex + 1} of ${n}${doneSet.has(card.id) ? " · ✓ done" : ""}</span>
         <h3>${escape(card.title)}</h3>
         ${card.kind !== "checklist" ? `<span class="ver">${verSpan(card.sourceVersion, card.targetVersion)}</span>` : ""}
-        ${card.k8sVersion ? `<span class="ver ver-k8s">Kubernetes ${escape(card.k8sVersion.from)} &rarr; ${escape(card.k8sVersion.to)}</span>` : ""}
+        ${card.k8sVersion ? `<span class="ver ver-k8s">Kubernetes ${escape(card.k8sVersion.from)} &rarr; ${escape(card.k8sVersion.to)}${escape(hopsQualifier(card.k8sVersion))}</span>` : ""}
         ${card.formerly ? `<span class="formerly">formerly ${escape(card.formerly)}</span>` : ""}
       </header>
       <div class="phase-body">${phaseBodyHTML(card)}</div>
@@ -671,11 +714,28 @@ function wireNav() {
 // ---------- Full-runbook export ----------
 
 function fullRunbookHTML(plan) {
-  let html = `<h1>${escape(plan.editionLabel)} — Upgrade Runbook</h1>
-    <p><strong>Upgrade path:</strong> ${escape(routeString(plan.edition, plan.source, plan.target))}</p>
+  // Title leads with the upgrade path (the same fact the on-screen H2 leads with), edition as a
+  // subtitle underneath — matches the on-screen runbook's title/subtitle order (h2 path, then a
+  // "<editionLabel> · N phases · N complete" line) rather than burying the path in a body paragraph.
+  let html = `<h1>Upgrade Runbook: ${escape(routeString(plan.edition, plan.source, plan.target))}</h1>
+    <p class="pdf-subtitle">${escape(plan.editionLabel)}</p>
     <p>${escape(plan.editionSummary)}</p>`;
+  const guideHome = docUrl(DATA, plan.target, "home");
+  // The closing note is nested INSIDE the last phase-card's own article (not appended as a
+  // separate trailing sibling) — html2pdf's avoid-all slicer mis-paginates a short trailing
+  // element right after a long, already-split card (confirmed empirically: it was rendering as a
+  // near-blank final page with the note's content missing entirely, and neither forcing nor
+  // removing break-inside/page-break hints on that element fixed it). Nesting it in the last
+  // card's own .phase-body makes it just more content flowing through the same pagination that
+  // already works correctly for that card.
   plan.cards.forEach((c, i) => {
-    html += `<article class="phase-card pdf"><header class="phase-head"><span class="phase-tag">Phase ${i + 1} of ${plan.cards.length}</span><h3>${escape(c.title)}</h3></header><div class="phase-body">${phaseBodyHTML(c)}</div></article>`;
+    const isLast = i === plan.cards.length - 1;
+    const endNote = isLast ? `<div class="pdf-end">
+        <h2>End of Runbook</h2>
+        <p>You've reached the end of this ${plan.cards.length}-phase upgrade runbook for <strong>${escape(routeString(plan.edition, plan.source, plan.target))}</strong> (${escape(plan.editionLabel)}).</p>
+        <p>Always confirm each phase's exact steps against the official documentation before executing in production${guideHome ? ` — <a href="${guideHome}">Open the full TCP ${escape(plan.target)} Upgrade Guide</a>` : ""}.</p>
+      </div><div style="height:150px" aria-hidden="true"></div>` : "";
+    html += `<article class="phase-card pdf"><header class="phase-head"><span class="phase-tag">Phase ${i + 1} of ${plan.cards.length}</span><h3>${escape(c.title)}</h3></header><div class="phase-body">${phaseBodyHTML(c)}${endNote}</div></article>`;
   });
   return html;
 }
@@ -683,17 +743,25 @@ function fullRunbookHTML(plan) {
 function exportPdf() {
   if (!currentPlan) return flashBtn("exportPdf", "Generate first");
   if (typeof window.html2pdf === "undefined") { window.print(); return; }
+  // .pdf-holder must render in normal document flow (see its CSS comment) for html2canvas to
+  // capture real content instead of a blank page — mask it with a full-screen overlay instead of
+  // positioning it off-screen, so the user sees "Generating…" rather than a flash of raw content.
+  const overlay = document.createElement("div");
+  overlay.className = "pdf-overlay";
+  overlay.textContent = "Generating PDF…";
+  document.body.appendChild(overlay);
   const holder = document.createElement("div");
   holder.className = "pdf-holder";
   holder.innerHTML = fullRunbookHTML(currentPlan);
   document.body.appendChild(holder);
   const name = `TCP-upgrade-${currentPlan.edition}-${currentPlan.source}-to-${currentPlan.target}.pdf`.replace(/\s+/g, "");
   flashBtn("exportPdf", "Generating…");
+  const cleanup = () => { holder.remove(); overlay.remove(); };
   window.html2pdf()
     .set({ margin: 10, filename: name, image: { type: "jpeg", quality: 0.95 }, html2canvas: { scale: 2 }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }, pagebreak: { mode: ["css", "avoid-all"] } })
     .from(holder).save()
-    .then(() => { holder.remove(); flashBtn("exportPdf", "Saved"); })
-    .catch(() => { holder.remove(); flashBtn("exportPdf", "Failed — try Print"); });
+    .then(() => { cleanup(); flashBtn("exportPdf", "Saved"); })
+    .catch(() => { cleanup(); flashBtn("exportPdf", "Failed — try Print"); });
 }
 
 // ---------- Markdown export (full) ----------
@@ -718,7 +786,7 @@ function mdSnippets(snippets) {
 
 function planToMarkdown(plan) {
   const guideHome = docUrl(DATA, plan.target, "home");
-  const out = [`# ${plan.editionLabel} — Upgrade Runbook`, `**Upgrade path:** ${routeString(plan.edition, plan.source, plan.target)}`, ""];
+  const out = [`# Upgrade Runbook: ${routeString(plan.edition, plan.source, plan.target)}`, `### ${plan.editionLabel}`, ""];
   out.push("_This runbook outlines the high-level steps to upgrade the required and optional components of VMware Telco Cloud Platform. For detailed instructions, refer to the corresponding component documentation linked in each phase._");
   if (guideHome) out.push(`📘 [Full TCP ${plan.target} Upgrade Guide](${guideHome})`);
   out.push("", plan.editionSummary, "");
@@ -729,7 +797,7 @@ function planToMarkdown(plan) {
   plan.cards.forEach((card, i) => {
     out.push(`## Phase ${i + 1}: ${card.title}${doneSet.has(card.id) ? " ✅" : ""}`);
     if (card.kind !== "checklist") out.push(`_Version: ${card.sourceVersion && card.sourceVersion !== "NA" ? card.sourceVersion + " → " : "→ "}${card.targetVersion}_`);
-    if (card.k8sVersion) out.push(`_Kubernetes: ${card.k8sVersion.from} → ${card.k8sVersion.to}_`);
+    if (card.k8sVersion) out.push(`_Kubernetes: ${card.k8sVersion.from} → ${card.k8sVersion.to}${hopsQualifier(card.k8sVersion)}_`);
     if (card.conditional) out.push(`> **Conditional:** ${card.conditional}`);
     const cav = card.k8sChain || componentCaveat(DATA, plan.target, plan.source, card.id);
     if (Array.isArray(cav)) out.push(...mdList("Required version sequence", cav));
@@ -790,10 +858,21 @@ function setThemeLabel(theme) {
 
 async function main() {
   initTheme();
+  // The interactive #runbook only ever holds one phase at a time (Back/Next swap it in place), so
+  // printing it directly only prints whatever phase is currently on screen. beforeprint fires for
+  // any print trigger (this button, Ctrl+P, browser menu) — populate the full multi-phase
+  // #printFull container right before printing so @media print can swap to it instead.
+  window.addEventListener("beforeprint", () => {
+    el("printFull").innerHTML = currentPlan ? fullRunbookHTML(currentPlan) : "";
+  });
   el("print").addEventListener("click", () => window.print());
   el("copyMd").addEventListener("click", copyMarkdown);
   el("exportPdf").addEventListener("click", exportPdf);
   el("changeOpts").addEventListener("click", () => { setActiveNav("plan"); showWizard(); });
+  // Logo/brand acts as a "Home" link — works from any view (phase walkthrough, Components matrix,
+  // Upgrade Path) since showWizard() unconditionally resets to the wizard regardless of what was
+  // previously showing in #runbook.
+  el("homeBtn").addEventListener("click", (e) => { e.preventDefault(); setActiveNav("plan"); showWizard(); });
   try {
     DATA = await loadData();
     initWizard();

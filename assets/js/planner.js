@@ -130,12 +130,27 @@ function resolveCard(raw, version) {
   return out;
 }
 
+// Moves Tanzu Kubernetes Workload Cluster to sit immediately after Tanzu Kubernetes Management
+// Cluster in a *display* list — AKO sits between them in the guide's real execution order (a real
+// dependency: management cluster upgrades, then AKO, then workload cluster), so this must only
+// ever affect how selection/summary views group the pair visually, never the actual phase sequence
+// buildPlan() produces (which iterates sequence.json directly, independent of this function).
+export function groupTanzuForDisplay(items) {
+  const mgmtIdx = items.findIndex((i) => i.id === "tkg-mgmt");
+  const wlIdx = items.findIndex((i) => i.id === "tkg-workload");
+  if (mgmtIdx === -1 || wlIdx === -1 || wlIdx === mgmtIdx + 1) return items;
+  const out = items.slice();
+  const [workload] = out.splice(wlIdx, 1);
+  out.splice(out.findIndex((i) => i.id === "tkg-mgmt") + 1, 0, workload);
+  return out;
+}
+
 // Components available for an edition at a given source version:
 // must apply to the edition AND not be "NA" in that source release.
 export function availableComponents(data, edition, source) {
   const seq = data.sequence[edition];
   if (!seq) return [];
-  return seq.order
+  return groupTanzuForDisplay(seq.order
     .filter((o) => {
       const id = o.id;
       const meta = data.components[id] || {};
@@ -156,7 +171,7 @@ export function availableComponents(data, edition, source) {
       mandatory: !!data.components[o.id]?.mandatory,
       fullStack: !!o.fullStack,
       sourceVersion: sourceVersion(data, o.id, source),
-    }));
+    })));
 }
 
 // Build the ordered list of cards for the chosen edition/source/target.
