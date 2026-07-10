@@ -391,7 +391,9 @@ function showWizard() {
 // use, so it renders through the existing listSection/mdList path.
 function formatK8sChain(result, label) {
   const hops = result.waypoints;
-  const out = [`Computed from TCA's compatibility table for your current ${label} Kubernetes version (${hops[0]} → ${result.finalTarget}):`];
+  const out = hops.length === 1
+    ? [`Your current ${label} Kubernetes version (${hops[0]}) already matches the target — no Kubernetes hop is needed for this phase.`]
+    : [`Computed from TCA's compatibility table for your current ${label} Kubernetes version (${hops[0]} → ${result.finalTarget}):`];
   for (let i = 0; i < hops.length - 1; i++) out.push(`${i + 1}. ${hops[i]} → ${hops[i + 1]}`);
   if (result.prerequisite) out.push(`Prerequisite: ${result.prerequisite}`);
   if (result.note) out.push(result.note);

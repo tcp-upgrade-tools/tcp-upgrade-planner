@@ -14,9 +14,11 @@
         "1.26.8": ["1.26.8", "1.27.5", "1.28.11"],
         "1.27.5": ["1.27.5", "1.28.11"],
         "1.28.4": ["1.28.4", "1.28.11"],
-        "1.28.7": ["1.28.7", "1.28.11"]
+        "1.28.7": ["1.28.7", "1.28.11"],
+        "1.28.11": ["1.28.11"]
       },
       "notes": {
+        "1.28.11": "Already at the final target — no Kubernetes hop needed for this phase. Not a guide table row (a target can't be its own table row) but a logically necessary option: the guide explicitly confirms staying on the same Kubernetes version through a TCA upgrade is expected ('even if the Kubernetes version remains the same, the Calico add-on update gets deployed' — TCP 5.0.2 guide, Calico Add-on Update note). Environments already fully caught up (e.g. genuine TCP 5.0.1→5.0.2, which per the component matrix changes only TCA/Harbor/Aria Operations — TKG and every SDDC component are identical between those two releases) need this option to avoid being forced through a fabricated-looking multi-hop chain that doesn't apply to them.",
         "1.24.10": "If this management cluster was migrated from TCA 2.3, upgrade its addon first, before upgrading Kubernetes to the next version.",
         "1.26.8": "Upgrade all workload clusters to v1.26.8+vmware.1 before this hop (see the Tanzu Kubernetes Workload Cluster phase).",
         "1.27.5": "Verified direct hop to 1.28.11: both the dedicated TCA 2.3→3.3.0.1 walkthrough AND the separate 'Management Clusters Compatibility Cluster Operations' table (its 'Upgrade Cluster' row for column v1.27.5 reads 'Yes (v1.28.11)') independently confirm this direct hop. Only the generic 'Upgrade Management Cluster Kubernetes Version' table lists an intermediate 1.28.4 stop, and that table's own 5-version compatibility matrix doesn't even include 1.28.4 as a recognized state — treated here as the outlier, not the majority-confirmed path.",
@@ -46,9 +48,11 @@
         "1.28.4": ["1.28.4", "1.28.11", "1.29.6", "1.30.2"],
         "1.28.7": ["1.28.7", "1.28.11", "1.29.6", "1.30.2"],
         "1.28.11": ["1.28.11", "1.29.6", "1.30.2"],
-        "1.29.6": ["1.29.6", "1.30.2"]
+        "1.29.6": ["1.29.6", "1.30.2"],
+        "1.30.2": ["1.30.2"]
       },
       "interleave": {
+        "1.30.2": "Already at the final target — no Kubernetes hop needed. Same reasoning as mgmt.notes['1.28.11']: not a guide table row, a logically necessary option so environments already fully caught up (e.g. genuine TCP 5.0.1→5.0.2) aren't forced through a chain that doesn't apply to them.",
         "1.24.10": "Interleaved with the management cluster: upgrade management cluster to 1.26.8 before this reaches 1.26.8 too, then to 1.28.11 before this continues past 1.26.8 to 1.27.15. The dedicated TCA 2.3 walkthrough instead names 1.26.14 as an explicit intermediate stop before the same continuation — either satisfies the management table's ’workload clusters at v1.26.8+vmware.1’ requirement, since 1.26.14 exceeds that threshold.",
         "1.24.17": "Interleaved: upgrade management cluster to 1.26.8 first, then to 1.28.11 (via 1.27.5) before this continues past 1.26.8.",
         "1.25.13": "Interleaved: upgrade management cluster to 1.26.8 first, then to 1.28.11 (via 1.27.5) before this continues past 1.26.8.",
@@ -80,9 +84,12 @@
     "mgmt": {
       "finalTarget": "1.29.15",
       "chains": {
-        "1.28.11": ["1.28.11", "1.29.15"]
+        "1.28.11": ["1.28.11", "1.29.15"],
+        "1.29.15": ["1.29.15"]
       },
-      "notes": {}
+      "notes": {
+        "1.29.15": "Already at the final target — no Kubernetes hop needed. Not a guide table row (a target can't be its own table row) but a logically necessary option for environments already fully caught up, so they aren't forced through a chain that doesn't apply to them."
+      }
     },
     "workload": {
       "finalTarget": "1.33.1",
@@ -90,9 +97,11 @@
         "1.27.15": ["1.27.15", "1.27.16", "1.28.15", "1.29.15", "1.30.13", "1.31.9", "1.32.5", "1.33.1"],
         "1.28.11": ["1.28.11", "1.29.15", "1.30.13", "1.31.9", "1.32.5", "1.33.1"],
         "1.29.6": ["1.29.6", "1.30.13", "1.31.9", "1.32.5", "1.33.1"],
-        "1.30.2": ["1.30.2", "1.31.9", "1.32.5", "1.33.1"]
+        "1.30.2": ["1.30.2", "1.31.9", "1.32.5", "1.33.1"],
+        "1.33.1": ["1.33.1"]
       },
       "interleave": {
+        "1.33.1": "Already at the final target — no Kubernetes hop needed, and no management cluster interleave applies.",
         "1.27.15": "Interleaved with the management cluster: upgrade management cluster to 1.29.15 first, before starting any workload hop in this chain (per the table, this is required even for the first hop, to v1.27.16).",
         "1.28.11": "Interleaved with the management cluster: upgrade management cluster to 1.29.15 first, before starting any workload hop in this chain — the table's own v1.33.1-column path for this row skips 1.28.15 entirely and jumps straight to 1.29.15.",
         "1.29.6": "Interleaved with the management cluster: upgrade management cluster to 1.29.15 first, before starting any workload hop in this chain — the table's own v1.33.1-column path for this row skips 1.29.15 entirely and jumps straight to 1.30.13.",
