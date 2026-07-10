@@ -259,6 +259,15 @@ live in the wizard checklist (`refreshAirgapLabel()`, called from `applyTcaK8sDe
 alongside the TKG label refresh, tagged with `.ck-airgapver`). If another component is ever found to
 always mirror TCA's version the same way, it needs this same treatment.
 
+## Visitor counter (footer)
+A `hits.sh` badge in the footer (`.visitor-badge`), matching the one on VMware's own VCF Upgrade
+Planner (the tool this project is explicitly inspired by) — a free third-party service, no
+account/API key needed, just an `<img>` pointing at
+`https://hits.sh/tcp-upgrade-tools.github.io/tcp-upgrade-planner.svg?label=Visitors&...`; it
+increments and re-renders the SVG server-side on every load. No JS, no cookies, no PII. If the badge
+service ever needs to change, keep it to a single `<img>` src swap — don't add a client-side
+counter/analytics script for this.
+
 ## "Already at the target Kubernetes version" must be a selectable option, not just the endpoint
 User-reported and guide-confirmed: for some source→target hops (verified concretely for TCP 5.0.1→
 5.0.2), the Kubernetes/TKG version doesn't change at all — the TCP 5.0.2 guide explicitly says so
