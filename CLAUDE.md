@@ -259,6 +259,26 @@ live in the wizard checklist (`refreshAirgapLabel()`, called from `applyTcaK8sDe
 alongside the TKG label refresh, tagged with `.ck-airgapver`). If another component is ever found to
 always mirror TCA's version the same way, it needs this same treatment.
 
+## "Already at the target Kubernetes version" must be a selectable option, not just the endpoint
+User-reported and guide-confirmed: for some source→target hops (verified concretely for TCP 5.0.1→
+5.0.2), the Kubernetes/TKG version doesn't change at all — the TCP 5.0.2 guide explicitly says so
+("even if the Kubernetes version remains the same, the Calico add-on update gets deployed" — Calico
+Add-on Update note). The component matrix confirms it structurally too: TKG and every SDDC component
+(NSX/vCenter/ESXi/vSAN) are byte-identical between TCP 5.0.1 and 5.0.2; only TCA/Airgap, Harbor, and
+Aria Operations actually change version. But `k8s-hops.json`'s `mgmt`/`workload` `chains` never had
+an entry keyed by the *final target itself* — a target can't be its own row in the guide's hop
+tables, so it was simply never a selectable "current version." That forced every TCP 5.0.1→5.0.2
+user through a fabricated-looking multi-hop chain regardless of their real (already-caught-up)
+state. Fixed by adding `"<finalTarget>": ["<finalTarget>"]` entries (single-waypoint, zero-hop
+chains) to both TCA blocks' mgmt and workload chains — explicitly labeled in their `notes`/
+`interleave` as a logically-necessary UI completion, not a new guide-derived fact (nothing to cite;
+it's tautological). `formatK8sChain()` renders the 1-waypoint case as "already matches the target —
+no hop needed" instead of an empty numbered list. Deliberately did NOT make this the *default* for
+TCA 3.3 (nominal for TCP 5.0.1) — the guide only documents TCA 3.3 as a range ("1.26.14 and above"),
+not a fixed point, so defaulting to "already there" would overstate certainty the guide doesn't
+support. If another source→target hop is found to have the same "target now selectable as a source"
+gap, apply the identical fix, not a per-target default.
+
 ## card.k8sVersion carries a hop count — use it, don't just show the bookend
 A bare "1.24.10 → 1.30.2" in the summary card/phase header/markdown reads as a single direct jump,
 but it's really the bookend of a multi-step chain (the full waypoint breakdown is `card.k8sChain`,
