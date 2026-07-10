@@ -153,6 +153,8 @@ svg { flex: none; }
 }
 .wiz-q { font-weight: 400; color: var(--ink-dim); font-size: 0.78rem; text-transform: none; letter-spacing: 0; }
 .wiz-hint { font-size: 0.78rem; color: var(--ink-dim); margin: 0.4rem 0 0; }
+.wiz-hint.top-note { margin: -0.6rem 0 1.4rem; padding: 0.55rem 0.8rem; border-left: 3px solid var(--accent); background: var(--surface-2); border-radius: 0 var(--radius) var(--radius) 0; color: var(--ink-2); font-size: 0.82rem; }
+.wiz-hint.top-note strong { color: var(--accent); }
 .wizard-card select {
   width: 100%; background: var(--surface); color: var(--ink);
   border: 1px solid var(--line-2); border-radius: var(--radius); padding: 0.6rem 0.7rem;
